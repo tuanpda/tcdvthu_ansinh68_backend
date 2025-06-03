@@ -388,6 +388,20 @@ router.get("/dmdtdong", async (req, res) => {
   }
 });
 
+// đối tượng đóng IL
+router.get("/dmdtdongil", async (req, res) => {
+  try {
+    await pool.connect();
+    const result = await pool
+      .request()
+      .query(`SELECT * FROM dm_doituongdong_il order by madoituong`);
+    const kq = result.recordset;
+    res.json(kq);
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 // ty le ho tro
 router.get("/tylehotro", async (req, res) => {
   try {
