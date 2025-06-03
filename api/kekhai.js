@@ -16,8 +16,8 @@ const fs = require("fs");
 const path = require("path");
 
 // var folderBienlaidientu = "/home/thuan/tcdvthu_client/static/bienlaidientu";
-var folderBienlaidientu = "E:\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\bienlaidientu";
-var urlServer = "14.224.129.177:1970";
+var folderBienlaidientu = "E:\\CODE_APP\\TCDVTHU\\ANSINH68\\tcdvthu_ansinh68_client\\static\\bienlaidientu";
+var urlServer = "14.224.129.177:1973";
 
 // SET STORAGE
 var storage = multer.diskStorage({

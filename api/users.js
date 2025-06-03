@@ -9,8 +9,8 @@ const fs = require("fs");
 const path = require("path");
 
 // var folderAvatar = "/home/thuan/tcdvthu_client/static/avatar";
-var folderAvatar = "E:\\CODE_APP\\TCDVTHU\\ANSINH159\\tcdvthu_ansinh159_client\\static\\avatar";
-var urlServer = "14.224.129.177:1970";
+var folderAvatar = "E:\\CODE_APP\\TCDVTHU\\ANSINH68\\tcdvthu_ansinh68_client\\static\\avatar";
+var urlServer = "14.224.129.177:1973";
 
 // SET STORAGE
 var storage = multer.diskStorage({
