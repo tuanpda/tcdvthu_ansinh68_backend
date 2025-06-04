@@ -1930,6 +1930,295 @@ router.get("/kykekhai-search-hoso-diemthu", async (req, res) => {
   }
 });
 
+// tìm kiếm hồ sơ  ĐÃ GỬI LÊN CỔNG đối với nhân viên công ty
+router.get("/kykekhai-search-hoso-daguilencong", async (req, res) => {
+  // console.log(req.query);
+
+  try {
+    const {
+      kykekhai,
+      sohoso,
+      dotkekhai,
+      ngaykekhai,
+      ngaykekhaiden,
+      masobhxh,
+      hoten,
+      tendaily,
+      maloaihinh,
+      page = 1,
+      limit = 30,
+    } = req.query;
+
+    // Chuyển đổi page và limit thành số nguyên
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
+
+    // Chuyển đổi ngày người dùng nhập vào sang định dạng DD-MM-YYYY
+    // const [year, month, day] = ngaykekhai.split("-");
+    // let ngaykekhaiInput = day + "-" + month + "-" + year;
+    // const [yeard, monthd, dayd] = ngaykekhaiden.split("-");
+    // let ngaykekhaidenInput = dayd + "-" + monthd + "-" + yeard;
+    // // console.log(ngaykekhaiInput);
+
+    // Khởi tạo câu truy vấn cơ bản
+    let query = "SELECT * FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and 1=1";
+    let queryCount = "SELECT COUNT(*) AS totalCount FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and 1=1";
+
+    // Thêm các điều kiện tìm kiếm nếu có
+    if (kykekhai) {
+      query += " AND kykekhai = @kykekhai";
+      queryCount += " AND kykekhai = @kykekhai";
+    }
+    if (sohoso) {
+      query += " AND sohoso = @sohoso";
+      queryCount += " AND sohoso = @sohoso";
+    }
+    if (dotkekhai) {
+      query += " AND dotkekhai = @dotkekhai";
+      queryCount += " AND dotkekhai = @dotkekhai";
+    }
+    // if (ngaykekhai && !ngaykekhaiden) {
+    //   query += " AND CONVERT(VARCHAR(10), ngaykekhai, 105) = @ngaykekhai";
+    //   queryCount += " AND CONVERT(VARCHAR(10), ngaykekhai, 105) = @ngaykekhai";
+    // }
+    // if (ngaykekhai && ngaykekhaiden) {
+    //   query +=
+    //     " AND CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN @ngaykekhai and @ngaykekhaiden";
+    //   queryCount +=
+    //     " AND CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN @ngaykekhai and @ngaykekhaiden";
+    // }
+    if (ngaykekhai && !ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
+    }
+
+    if (ngaykekhai && ngaykekhaiden) {      
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+    }
+
+    if (masobhxh) {
+      query += " AND masobhxh = @masobhxh";
+      queryCount += " AND masobhxh = @masobhxh";
+    }
+    if (hoten) {
+      query += " AND hoten like @hoten";
+      queryCount += " AND hoten like @hoten";
+    }
+    if (tendaily) {
+      query += " AND tendaily like @tendaily";
+      queryCount += " AND tendaily like @tendaily";
+    }
+    if (maloaihinh) {
+      query += " AND maloaihinh = @maloaihinh";
+      queryCount += " AND maloaihinh = @maloaihinh";
+    }
+
+    // Thêm phần phân trang CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN '13-12-2024' AND '14-12-2024';
+    query +=
+      " ORDER BY dotkekhai OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+
+    // console.log(query);
+
+    // Kết nối và thực thi truy vấn
+    await pool.connect();
+
+    const result = await pool
+      .request()
+      .input("kykekhai", kykekhai)
+      .input("sohoso", sohoso)
+      .input("dotkekhai", dotkekhai)
+      .input("ngaykekhai", ngaykekhai)
+      .input("ngaykekhaiden", ngaykekhaiden)
+      .input("masobhxh", masobhxh)
+      .input("maloaihinh", maloaihinh)
+      .input("hoten", `%${hoten}%`)
+      .input("tendaily", `%${tendaily}%`)
+      .input("offset", offset)
+      .input("limit", limitNumber)
+      .query(query);
+
+    const countResult = await pool
+      .request()
+      .input("kykekhai", kykekhai)
+      .input("sohoso", sohoso)
+      .input("dotkekhai", dotkekhai)
+      .input("ngaykekhai", ngaykekhai)
+      .input("ngaykekhaiden", ngaykekhaiden)
+      .input("masobhxh", masobhxh)
+      .input("maloaihinh", maloaihinh)
+      .input("hoten", `%${hoten}%`)
+      .input("tendaily", `%${tendaily}%`)
+      .query(queryCount);
+
+    const totalCount = countResult.recordset[0].totalCount;
+    const totalPages = Math.ceil(totalCount / limitNumber);
+
+    const info = {
+      count: totalCount,
+      pages: totalPages,
+      next:
+        pageNumber < totalPages
+          ? `${req.path}?page=${pageNumber + 1}&limit=${limit}`
+          : null,
+      prev:
+        pageNumber > 1
+          ? `${req.path}?page=${pageNumber - 1}&limit=${limit}`
+          : null,
+    };
+
+    // console.log(result.recordset);
+
+    res.json({ info, results: result.recordset });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// tìm kiếm hồ sơ đối với điểm thu
+router.get("/kykekhai-search-hoso-diemthu-daguilencong", async (req, res) => {
+  // console.log(req.query);
+
+  try {
+    const {
+      kykekhai,
+      sohoso,
+      dotkekhai,
+      ngaykekhai,
+      ngaykekhaiden,
+      masobhxh,
+      maloaihinh,
+      hoten,
+      madaily,
+      page = 1,
+      limit = 30,
+    } = req.query;
+
+    // Chuyển đổi page và limit thành số nguyên
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
+
+    // Chuyển đổi ngày người dùng nhập vào sang định dạng DD-MM-YYYY
+    // const [year, month, day] = ngaykekhai.split("-");
+    // let ngaykekhaiInput = day + "-" + month + "-" + year;
+    // const [yeard, monthd, dayd] = ngaykekhaiden.split("-");
+    // let ngaykekhaidenInput = dayd + "-" + monthd + "-" + yeard;
+    // console.log(ngaykekhaiInput);
+    // Khởi tạo câu truy vấn cơ bản
+    let query = "SELECT * FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and madaily=@madaily and 1=1";
+    let queryCount =
+      "SELECT COUNT(*) AS totalCount FROM kekhai WHERE trangthai=0 and status_hosoloi=0 and madaily=@madaily and 1=1";
+
+    // Thêm các điều kiện tìm kiếm nếu có
+    if (kykekhai) {
+      query += " AND kykekhai = @kykekhai";
+      queryCount += " AND kykekhai = @kykekhai";
+    }
+    if (sohoso) {
+      query += " AND sohoso = @sohoso";
+      queryCount += " AND sohoso = @sohoso";
+    }
+    if (dotkekhai) {
+      query += " AND dotkekhai = @dotkekhai";
+      queryCount += " AND dotkekhai = @dotkekhai";
+    }
+    // if (ngaykekhai && !ngaykekhaiden) {
+    //   query += " AND CONVERT(VARCHAR(10), ngaykekhai, 105) = @ngaykekhai";
+    //   queryCount += " AND CONVERT(VARCHAR(10), ngaykekhai, 105) = @ngaykekhai";
+    // }
+    // if (ngaykekhai && ngaykekhaiden) {
+    //   query +=
+    //     " AND CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN @ngaykekhai and @ngaykekhaiden";
+    //   queryCount +=
+    //     " AND CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN @ngaykekhai and @ngaykekhaiden";
+    // }
+
+    if (ngaykekhai && !ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) = @ngaykekhai`;
+    }
+
+    if (ngaykekhai && ngaykekhaiden) {
+      query += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+      queryCount += ` AND CONVERT(DATE, TRY_CONVERT(datetime, ngaykekhai, 105)) BETWEEN @ngaykekhai AND @ngaykekhaiden`;
+    }
+
+    if (masobhxh) {
+      query += " AND masobhxh = @masobhxh";
+      queryCount += " AND masobhxh = @masobhxh";
+    }
+    if (hoten) {
+      query += " AND hoten like @hoten";
+      queryCount += " AND hoten like @hoten";
+    }
+    if (maloaihinh) {
+      query += " AND maloaihinh = @maloaihinh";
+      queryCount += " AND maloaihinh = @maloaihinh";
+    }
+
+    // Thêm phần phân trang CONVERT(VARCHAR(10), ngaykekhai, 105) BETWEEN '13-12-2024' AND '14-12-2024';
+    query +=
+      " ORDER BY dotkekhai OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY";
+
+    // console.log(query);
+
+    // Kết nối và thực thi truy vấn
+    await pool.connect();
+
+    const result = await pool
+      .request()
+      .input("kykekhai", kykekhai)
+      .input("sohoso", sohoso)
+      .input("dotkekhai", dotkekhai)
+      .input("ngaykekhai", ngaykekhai)
+      .input("ngaykekhaiden", ngaykekhaiden)
+      .input("masobhxh", masobhxh)
+      .input("maloaihinh", maloaihinh)
+      .input("hoten", `%${hoten}%`)
+      .input("madaily", madaily)
+      .input("offset", offset)
+      .input("limit", limitNumber)
+      .query(query);
+
+    const countResult = await pool
+      .request()
+      .input("kykekhai", kykekhai)
+      .input("sohoso", sohoso)
+      .input("dotkekhai", dotkekhai)
+      .input("ngaykekhai", ngaykekhai)
+      .input("ngaykekhaiden", ngaykekhaiden)
+      .input("masobhxh", masobhxh)
+      .input("maloaihinh", maloaihinh)
+      .input("hoten", `%${hoten}%`)
+      .input("madaily", madaily)
+      .query(queryCount);
+
+    const totalCount = countResult.recordset[0].totalCount;
+    const totalPages = Math.ceil(totalCount / limitNumber);
+
+    const info = {
+      count: totalCount,
+      pages: totalPages,
+      next:
+        pageNumber < totalPages
+          ? `${req.path}?page=${pageNumber + 1}&limit=${limit}`
+          : null,
+      prev:
+        pageNumber > 1
+          ? `${req.path}?page=${pageNumber - 1}&limit=${limit}`
+          : null,
+    };
+
+    res.json({ info, results: result.recordset });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // xuất mẫu hồ sơ liệt kê danh sách
 router.get("/get-all-kekhai-xuatmau", async (req, res) => {
   try {

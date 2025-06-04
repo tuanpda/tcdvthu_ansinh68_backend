@@ -301,14 +301,14 @@ router.get("/dmbenhvienwithtinh", async (req, res) => {
 });
 
 // danh mục bệnh viện cho khu vực diễn châu
-router.get("/dmbenhvienwithtinh-dienchau", async (req, res) => {
+router.get("/dmbenhvienwithtinh-thachha", async (req, res) => {
   try {
     await pool.connect();
     const result = await pool.request()
       .query(`SELECT * 
 FROM dm_benhvien 
-WHERE matinh = '40' 
-  AND diachi LIKE N'%diễn châu%'`);
+WHERE matinh = '42' 
+  AND diachi LIKE N'%thạch hà%'`);
     const benhvien = result.recordset;
     res.json(benhvien);
   } catch (error) {
@@ -317,14 +317,14 @@ WHERE matinh = '40'
 });
 
 // danh mục xã cho khu vực diễn châu
-router.get("/dmxaphuong-dienchau", async (req, res) => {
+router.get("/dmxaphuong-thachha", async (req, res) => {
   try {
     await pool.connect();
     const result = await pool.request()
       .query(`SELECT * 
 FROM dm_xaphuong 
-WHERE matinh = '40' 
-  AND maquanhuyen='425'`);
+WHERE matinh = '42' 
+  AND maquanhuyen='445'`);
     const benhvien = result.recordset;
     res.json(benhvien);
   } catch (error) {
